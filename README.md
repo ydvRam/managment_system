@@ -15,7 +15,13 @@ A full-stack web application for managing candidate information during recruitme
 - **Frontend**: Vanilla HTML, CSS, JavaScript
 - **Database**: PostgreSQL with schema constraints and indexes
 
-## Prerequisites
+## Deploy to Render
+
+To deploy this app (backend + frontend + PostgreSQL) on [Render](https://render.com), see **[DEPLOY.md](DEPLOY.md)**. Use the Blueprint (`render.yaml`) for one-click setup.
+
+---
+
+## Prerequisites (local)
 
 - Node.js 18+
 - PostgreSQL 14+ (installed and running)

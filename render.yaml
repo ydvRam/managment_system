@@ -1,23 +1,60 @@
 # Render Blueprint - Candidate Management System
 # See https://render.com/docs/blueprint-spec
 
+# databases:
+#   - name: candidate-db
+#     plan: free
+#     databaseName: candidate_db
+
+# services:
+#   - type: web
+#     name: candidate-management
+#     runtime: node
+#     rootDir: backend
+#     buildCommand: npm install
+#     startCommand: npm start
+#     releaseCommand: npm run init-db
+#     envVars:
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: candidate-db
+#           property: connectionString
+#       - key: NODE_ENV
+#         value: production
+services:
+  - type: web
+    name: candidate-management-api
+    env: node
+    plan: free
+    buildCommand: |
+      npm install
+      npm run init-db
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PG_HOST
+        fromDatabase:
+          name: candidate-db
+          property: host
+      - key: PG_PORT
+        fromDatabase:
+          name: candidate-db
+          property: port
+      - key: PG_DATABASE
+        fromDatabase:
+          name: candidate-db
+          property: database
+      - key: PG_USER
+        fromDatabase:
+          name: candidate-db
+          property: user
+      - key: PG_PASSWORD
+        fromDatabase:
+          name: candidate-db
+          property: password
+
 databases:
   - name: candidate-db
     plan: free
-    databaseName: candidate_db
 
-services:
-  - type: web
-    name: candidate-management
-    runtime: node
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: npm start
-    releaseCommand: npm run init-db
-    envVars:
-      - key: DATABASE_URL
-        fromDatabase:
-          name: candidate-db
-          property: connectionString
-      - key: NODE_ENV
-        value: production
