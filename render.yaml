@@ -53,8 +53,3 @@ services:
         fromDatabase:
           name: candidate-db
           property: password
-
-databases:
-  - name: candidate-db
-    plan: free
-
