@@ -26,30 +26,9 @@ services:
     name: candidate-management-api
     env: node
     plan: free
-    buildCommand: |
-      npm install
-      npm run init-db
+    buildCommand: npm install
     startCommand: npm start
+    rootDir: backend
     envVars:
       - key: NODE_ENV
         value: production
-      - key: PG_HOST
-        fromDatabase:
-          name: candidate-db
-          property: host
-      - key: PG_PORT
-        fromDatabase:
-          name: candidate-db
-          property: port
-      - key: PG_DATABASE
-        fromDatabase:
-          name: candidate-db
-          property: database
-      - key: PG_USER
-        fromDatabase:
-          name: candidate-db
-          property: user
-      - key: PG_PASSWORD
-        fromDatabase:
-          name: candidate-db
-          property: password
