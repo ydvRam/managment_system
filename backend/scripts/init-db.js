@@ -4,19 +4,22 @@ const fs = require('fs');
 const envPath = path.join(__dirname, '..', '.env');
 if (fs.existsSync(envPath)) {
   require('dotenv').config({ path: envPath });
-} else {
-  console.error('No .env file found in backend folder. Copy .env.example to .env and set PG_PASSWORD.');
 }
 
 const { Pool } = require('pg');
 
-const pool = new Pool({
-  user: process.env.PG_USER || 'postgres',
-  host: process.env.PG_HOST || 'localhost',
-  database: process.env.PG_DATABASE || 'candidate_db',
-  password: String(process.env.PG_PASSWORD ?? ''),
-  port: parseInt(process.env.PG_PORT || '5432', 10),
-});
+// Support DATABASE_URL (Render) or PG_* vars (local)
+const config = process.env.DATABASE_URL
+  ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+  : {
+      user: process.env.PG_USER || 'postgres',
+      host: process.env.PG_HOST || 'localhost',
+      database: process.env.PG_DATABASE || 'candidate_db',
+      password: String(process.env.PG_PASSWORD ?? ''),
+      port: parseInt(process.env.PG_PORT || '5432', 10),
+    };
+
+const pool = new Pool(config);
 
 const schemaPath = path.join(__dirname, '..', '..', 'database', 'schema.sql');
 const sql = fs.readFileSync(schemaPath, 'utf8');
