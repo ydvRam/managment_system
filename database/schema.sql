@@ -1,36 +1,38 @@
--- Candidate Management System - Database Schema
--- Run this script to create the database and table
-
-CREATE TABLE IF NOT EXISTS candidates (
+CREATE TABLE IF NOT EXISTS student (
     id SERIAL PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    age INTEGER NOT NULL CHECK (age >= 18 AND age <= 120),
-    email VARCHAR(255) NOT NULL UNIQUE,
-    phone VARCHAR(50),
-    skills TEXT,
-    experience VARCHAR(100),
-    applied_position VARCHAR(255),
-    status VARCHAR(50) DEFAULT 'Applied' CHECK (status IN ('Applied', 'Interviewing', 'Hired', 'Rejected')),
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    sroll INT,
+    name VARCHAR(100),
+    age INT,
+    email VARCHAR(100),
+    phone BIGINT,
+    scode VARCHAR(100),
+    address VARCHAR(100),
+    coursename VARCHAR(100)
 );
 
--- Index for faster lookups by email and status
-CREATE INDEX IF NOT EXISTS idx_candidates_email ON candidates(email);
-CREATE INDEX IF NOT EXISTS idx_candidates_status ON candidates(status);
-CREATE INDEX IF NOT EXISTS idx_candidates_created_at ON candidates(created_at DESC);
+-- Add missing columns if table already existed with an older schema
+ALTER TABLE student ADD COLUMN IF NOT EXISTS id SERIAL;
+ALTER TABLE student ADD COLUMN IF NOT EXISTS sroll INT;
+ALTER TABLE student ADD COLUMN IF NOT EXISTS name VARCHAR(100);
+ALTER TABLE student ADD COLUMN IF NOT EXISTS age INT;
+ALTER TABLE student ADD COLUMN IF NOT EXISTS email VARCHAR(100);
+ALTER TABLE student ADD COLUMN IF NOT EXISTS phone BIGINT;
+ALTER TABLE student ADD COLUMN IF NOT EXISTS scode VARCHAR(100);
+ALTER TABLE student ADD COLUMN IF NOT EXISTS address VARCHAR(100);
+ALTER TABLE student ADD COLUMN IF NOT EXISTS coursename VARCHAR(100);
 
--- Trigger to auto-update updated_at
-CREATE OR REPLACE FUNCTION update_updated_at_column()
-RETURNS TRIGGER AS $$
+-- One-time: copy existing data from candidates to student (only when student is empty)
+DO $$
 BEGIN
-    NEW.updated_at = CURRENT_TIMESTAMP;
-    RETURN NEW;
-END;
-$$ language 'plpgsql';
-
-DROP TRIGGER IF EXISTS update_candidates_updated_at ON candidates;
-CREATE TRIGGER update_candidates_updated_at
-    BEFORE UPDATE ON candidates
-    FOR EACH ROW
-    EXECUTE PROCEDURE update_updated_at_column();
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'candidates')
+     AND NOT EXISTS (SELECT 1 FROM student LIMIT 1) THEN
+    INSERT INTO student (sroll, name, age, email, phone, scode, address, coursename)
+    SELECT s_roll, name, age, email, phone, s_code, address, course_name FROM candidates;
+  END IF;
+EXCEPTION WHEN undefined_column THEN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_schema = 'public' AND table_name = 'candidates')
+     AND NOT EXISTS (SELECT 1 FROM student LIMIT 1) THEN
+    INSERT INTO student (sroll, name, age, email, phone, scode, address, coursename)
+    SELECT sroll, name, age, email, phone, scode, address, coursename FROM candidates;
+  END IF;
+END $$;

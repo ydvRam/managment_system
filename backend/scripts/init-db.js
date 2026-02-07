@@ -31,6 +31,6 @@ pool.query(sql)
   })
   .catch((err) => {
     console.error('Schema application failed:', err.message);
-    if (err.code === '3D000') console.error('→ Create the database first: CREATE DATABASE candidate_db;');
+    if (err.code === '3D000') console.error('→ Create the database first: CREATE DATABASE gurugram;');
     process.exit(1);
   });

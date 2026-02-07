@@ -6,11 +6,11 @@ const { validateCandidate } = require('../middleware/validation');
 const COLS = 'id, sroll AS s_roll, name, age, email, phone, scode AS s_code, address, coursename AS course_name';
 const COLS_INSERT = 'sroll, name, age, email, phone, scode, address, coursename';
 
-// GET /api/candidates - Retrieve all (optional search & filter by course)
+// GET /api/student - Retrieve all (optional search & filter by course)
 router.get('/', async (req, res) => {
   try {
     const { search, course } = req.query;
-    let query = `SELECT ${COLS} FROM candidates WHERE 1=1`;
+    let query = `SELECT ${COLS} FROM student WHERE 1=1`;
     const params = [];
     let paramIndex = 1;
 
@@ -28,10 +28,10 @@ router.get('/', async (req, res) => {
     query += ' ORDER BY id DESC';
 
     const result = await pool.query(query, params);
-    res.json({ candidates: result.rows });
+    res.json({ student: result.rows });
   } catch (err) {
-    console.error('GET /api/candidates error:', err);
-    const message = err.code === '42P01' ? 'Database table "candidates" does not exist. Run: npm run init-db' : (err.message || 'Failed to retrieve candidates');
+    console.error('GET /api/student error:', err);
+    const message = err.code === '42P01' ? 'Database table "student" does not exist. Run: npm run init-db' : (err.message || 'Failed to retrieve candidates');
     res.status(500).json({ error: message });
   }
 });
@@ -42,12 +42,12 @@ router.get('/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
-    const result = await pool.query(`SELECT ${COLS} FROM candidates WHERE id = $1`, [id]);
+    const result = await pool.query(`SELECT ${COLS} FROM student WHERE id = $1`, [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Candidate not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    console.error('GET /api/candidates/:id error:', err);
-    const message = err.code === '42P01' ? 'Database table "candidates" does not exist. Run: npm run init-db' : (err.message || 'Failed to retrieve candidate');
+    console.error('GET /api/student/:id error:', err);
+    const message = err.code === '42P01' ? 'Database table "student" does not exist. Run: npm run init-db' : (err.message || 'Failed to retrieve candidate');
     res.status(500).json({ error: message });
   }
 });
@@ -60,7 +60,7 @@ router.post('/', async (req, res) => {
 
     const { s_roll, name, age, email, phone, s_code, address, course_name } = req.body;
     const result = await pool.query(
-      `INSERT INTO candidates (${COLS_INSERT})
+      `INSERT INTO student (${COLS_INSERT})
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        RETURNING ${COLS}`,
       [
@@ -77,9 +77,9 @@ router.post('/', async (req, res) => {
     res.status(201).json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'A record with this email already exists' });
-    if (err.code === '42P01') return res.status(500).json({ error: 'Database table "candidates" does not exist. Run: npm run init-db' });
+    if (err.code === '42P01') return res.status(500).json({ error: 'Database table "student" does not exist. Run: npm run init-db' });
     if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') return res.status(500).json({ error: 'Cannot connect to database.' });
-    console.error('POST /api/candidates error:', err);
+    console.error('POST /api/student error:', err);
     res.status(500).json({ error: err.message || 'Failed to create candidate' });
   }
 });
@@ -95,7 +95,7 @@ router.put('/:id', async (req, res) => {
 
     const { s_roll, name, age, email, phone, s_code, address, course_name } = req.body;
     const result = await pool.query(
-      `UPDATE candidates SET
+      `UPDATE student SET
         sroll = $2, name = $3, age = $4, email = $5, phone = $6, scode = $7, address = $8, coursename = $9
        WHERE id = $1
        RETURNING ${COLS}`,
@@ -115,7 +115,7 @@ router.put('/:id', async (req, res) => {
     res.json(result.rows[0]);
   } catch (err) {
     if (err.code === '23505') return res.status(409).json({ error: 'A record with this email already exists' });
-    console.error('PUT /api/candidates/:id error:', err);
+    console.error('PUT /api/student/:id error:', err);
     res.status(500).json({ error: err.message || 'Failed to update candidate' });
   }
 });
@@ -126,11 +126,11 @@ router.delete('/:id', async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
-    const result = await pool.query('DELETE FROM candidates WHERE id = $1 RETURNING id', [id]);
+    const result = await pool.query('DELETE FROM student WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Candidate not found' });
     res.status(204).send();
   } catch (err) {
-    console.error('DELETE /api/candidates/:id error:', err);
+    console.error('DELETE /api/student/:id error:', err);
     res.status(500).json({ error: err.message || 'Failed to delete candidate' });
   }
 });
