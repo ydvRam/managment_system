@@ -1,24 +1,26 @@
-const { Pool } = require('pg');
-require('dotenv').config();
+const { Pool } = require("pg");
+require("dotenv").config();
 
-// Render and other hosts provide DATABASE_URL; locally use PG_* vars
-const config = process.env.DATABASE_URL
-  ? {
-      connectionString: process.env.DATABASE_URL,
-      ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    }
-  : {
-      user: process.env.PG_USER || 'postgres',
-      host: process.env.PG_HOST || 'localhost',
-      database: process.env.PG_DATABASE || 'candidate_db',
-      password: String(process.env.PG_PASSWORD ?? ''),
-      port: parseInt(process.env.PG_PORT || '5432', 10),
-    };
+const isProduction = process.env.NODE_ENV === "production";
 
-const pool = new Pool(config);
+const pool = new Pool({
+  host: process.env.PG_HOST || "localhost",
+  user: process.env.PG_USER || "postgres",
+  password: process.env.PG_PASSWORD,
+  database: process.env.PG_DATABASE || "candidate_db",
+  port: Number(process.env.PG_PORT) || 5432,
+  ssl: isProduction
+    ? { rejectUnauthorized: false } // cloud DBs
+    : false                          // local DB
+});
 
-pool.on('error', (err) => {
-  console.error('Unexpected database pool error:', err);
+pool.on("connect", () => {
+  console.log("PostgreSQL connected");
+});
+
+pool.on("error", (err) => {
+  console.error("Unexpected database pool error:", err);
+  process.exit(1);
 });
 
 module.exports = { pool };
