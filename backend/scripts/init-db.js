@@ -14,7 +14,7 @@ const config = process.env.DATABASE_URL
   : {
       user: process.env.PG_USER || 'postgres',
       host: process.env.PG_HOST || 'localhost',
-      database: process.env.PG_DATABASE || 'candidate_db',
+      database: process.env.PG_DATABASE || 'gurugram',
       password: String(process.env.PG_PASSWORD ?? ''),
       port: parseInt(process.env.PG_PORT || '5432', 10),
     };

@@ -3,26 +3,29 @@ const router = express.Router();
 const { pool } = require('../db/connection');
 const { validateCandidate } = require('../middleware/validation');
 
-// GET /api/candidates - Retrieve all candidates (with optional search & filter)
+const COLS = 'id, sroll AS s_roll, name, age, email, phone, scode AS s_code, address, coursename AS course_name';
+const COLS_INSERT = 'sroll, name, age, email, phone, scode, address, coursename';
+
+// GET /api/candidates - Retrieve all (optional search & filter by course)
 router.get('/', async (req, res) => {
   try {
-    const { search, status } = req.query;
-    let query = 'SELECT id, name, age, email, phone, skills, experience, applied_position, status, created_at, updated_at FROM candidates WHERE 1=1';
+    const { search, course } = req.query;
+    let query = `SELECT ${COLS} FROM candidates WHERE 1=1`;
     const params = [];
     let paramIndex = 1;
 
     if (search && search.trim()) {
       const term = `%${search.trim()}%`;
-      query += ` AND (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR skills ILIKE $${paramIndex} OR applied_position ILIKE $${paramIndex})`;
+      query += ` AND (name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR scode ILIKE $${paramIndex} OR coursename ILIKE $${paramIndex} OR address ILIKE $${paramIndex})`;
       params.push(term);
       paramIndex++;
     }
-    if (status && status.trim()) {
-      query += ` AND status = $${paramIndex}`;
-      params.push(status.trim());
+    if (course && course.trim()) {
+      query += ` AND coursename = $${paramIndex}`;
+      params.push(course.trim());
       paramIndex++;
     }
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY id DESC';
 
     const result = await pool.query(query, params);
     res.json({ candidates: result.rows });
@@ -33,16 +36,13 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/candidates/:id - Retrieve specific candidate
+// GET /api/candidates/:id
 router.get('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid candidate ID' });
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
-    const result = await pool.query(
-      'SELECT id, name, age, email, phone, skills, experience, applied_position, status, created_at, updated_at FROM candidates WHERE id = $1',
-      [id]
-    );
+    const result = await pool.query(`SELECT ${COLS} FROM candidates WHERE id = $1`, [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Candidate not found' });
     res.json(result.rows[0]);
   } catch (err) {
@@ -52,87 +52,86 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// POST /api/candidates - Create new candidate
+// POST /api/candidates
 router.post('/', async (req, res) => {
   try {
     const errors = validateCandidate(req.body, false);
     if (errors.length > 0) return res.status(400).json({ errors });
 
-    const { name, age, email, phone, skills, experience, applied_position, status } = req.body;
+    const { s_roll, name, age, email, phone, s_code, address, course_name } = req.body;
     const result = await pool.query(
-      `INSERT INTO candidates (name, age, email, phone, skills, experience, applied_position, status)
+      `INSERT INTO candidates (${COLS_INSERT})
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-       RETURNING id, name, age, email, phone, skills, experience, applied_position, status, created_at, updated_at`,
+       RETURNING ${COLS}`,
       [
+        s_roll != null && s_roll !== '' ? parseInt(s_roll, 10) : null,
         (name || '').toString().trim(),
-        parseInt(age, 10),
+        age != null && age !== '' ? parseInt(age, 10) : null,
         (email || '').toString().trim().toLowerCase(),
-        (phone || '').toString().trim() || null,
-        (skills || '').toString().trim() || null,
-        experience != null ? (experience + '').trim() : null,
-        (applied_position || '').toString().trim() || null,
-        (status || 'Applied').toString().trim()
+        phone != null && phone !== '' ? parseInt(phone, 10) : null,
+        (s_code || '').toString().trim() || null,
+        (address || '').toString().trim() || null,
+        (course_name || '').toString().trim() || null,
       ]
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'A candidate with this email already exists' });
-    if (err.code === '23514') return res.status(400).json({ error: 'Validation failed: check age and status values' });
+    if (err.code === '23505') return res.status(409).json({ error: 'A record with this email already exists' });
     if (err.code === '42P01') return res.status(500).json({ error: 'Database table "candidates" does not exist. Run: npm run init-db' });
-    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') return res.status(500).json({ error: 'Cannot connect to database. Check .env and that PostgreSQL is running.' });
+    if (err.code === 'ECONNREFUSED' || err.code === 'ENOTFOUND') return res.status(500).json({ error: 'Cannot connect to database.' });
     console.error('POST /api/candidates error:', err);
     res.status(500).json({ error: err.message || 'Failed to create candidate' });
   }
 });
 
-// PUT /api/candidates/:id - Update existing candidate
+// PUT /api/candidates/:id
 router.put('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid candidate ID' });
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
     const errors = validateCandidate(req.body, false);
     if (errors.length > 0) return res.status(400).json({ errors });
 
-    const { name, age, email, phone, skills, experience, applied_position, status } = req.body;
+    const { s_roll, name, age, email, phone, s_code, address, course_name } = req.body;
     const result = await pool.query(
       `UPDATE candidates SET
-        name = $2, age = $3, email = $4, phone = $5, skills = $6, experience = $7, applied_position = $8, status = $9
+        sroll = $2, name = $3, age = $4, email = $5, phone = $6, scode = $7, address = $8, coursename = $9
        WHERE id = $1
-       RETURNING id, name, age, email, phone, skills, experience, applied_position, status, created_at, updated_at`,
+       RETURNING ${COLS}`,
       [
         id,
-        (name ?? '').toString().trim(),
-        parseInt(age, 10),
-        (email ?? '').toString().trim().toLowerCase(),
-        (phone ?? '').toString().trim() || null,
-        (skills ?? '').toString().trim() || null,
-        experience != null && experience !== '' ? (experience + '').trim() : null,
-        (applied_position ?? '').toString().trim() || null,
-        (status ?? 'Applied').toString().trim()
+        s_roll != null && s_roll !== '' ? parseInt(s_roll, 10) : null,
+        (name || '').toString().trim(),
+        age != null && age !== '' ? parseInt(age, 10) : null,
+        (email || '').toString().trim().toLowerCase(),
+        phone != null && phone !== '' ? parseInt(phone, 10) : null,
+        (s_code || '').toString().trim() || null,
+        (address || '').toString().trim() || null,
+        (course_name || '').toString().trim() || null,
       ]
     );
     if (result.rows.length === 0) return res.status(404).json({ error: 'Candidate not found' });
     res.json(result.rows[0]);
   } catch (err) {
-    if (err.code === '23505') return res.status(409).json({ error: 'A candidate with this email already exists' });
+    if (err.code === '23505') return res.status(409).json({ error: 'A record with this email already exists' });
     console.error('PUT /api/candidates/:id error:', err);
-    res.status(500).json({ error: 'Failed to update candidate' });
+    res.status(500).json({ error: err.message || 'Failed to update candidate' });
   }
 });
 
-// DELETE /api/candidates/:id - Delete candidate
+// DELETE /api/candidates/:id
 router.delete('/:id', async (req, res) => {
   try {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).json({ error: 'Invalid candidate ID' });
+    if (isNaN(id)) return res.status(400).json({ error: 'Invalid ID' });
 
     const result = await pool.query('DELETE FROM candidates WHERE id = $1 RETURNING id', [id]);
     if (result.rows.length === 0) return res.status(404).json({ error: 'Candidate not found' });
     res.status(204).send();
   } catch (err) {
     console.error('DELETE /api/candidates/:id error:', err);
-    res.status(500).json({ error: 'Failed to delete candidate' });
+    res.status(500).json({ error: err.message || 'Failed to delete candidate' });
   }
 });
 
